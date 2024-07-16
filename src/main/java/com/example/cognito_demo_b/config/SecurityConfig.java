@@ -4,45 +4,29 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.oauth2.client.endpoint.DefaultAuthorizationCodeTokenResponseClient;
-import org.springframework.security.oauth2.client.endpoint.OAuth2AuthorizationCodeGrantRequestEntityConverter;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.config.Customizer;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
-    private final CustomOAuth2LoginSuccessHandler customOAuth2LoginSuccessHandler;
-    private final CognitoOidcLogoutSuccessHandler cognitoOidcLogoutSuccessHandler;
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+            .authorizeHttpRequests(authorizeRequests -> 
+                authorizeRequests
+                    .anyRequest().authenticated()
+            )
+            .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
 
-    public SecurityConfig(CustomOAuth2LoginSuccessHandler customOAuth2LoginSuccessHandler, CognitoOidcLogoutSuccessHandler cognitoOidcLogoutSuccessHandler) {
-        this.customOAuth2LoginSuccessHandler = customOAuth2LoginSuccessHandler;
-        this.cognitoOidcLogoutSuccessHandler = cognitoOidcLogoutSuccessHandler;
+        return http.build();
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        DefaultAuthorizationCodeTokenResponseClient tokenResponseClient = new DefaultAuthorizationCodeTokenResponseClient();
-        OAuth2AuthorizationCodeGrantRequestEntityConverter requestEntityConverter = new OAuth2AuthorizationCodeGrantRequestEntityConverter();
-        tokenResponseClient.setRequestEntityConverter(requestEntityConverter);
-
-        http
-            .authorizeHttpRequests(authz -> authz
-                .requestMatchers("/**").permitAll()
-                .anyRequest().authenticated()
-            )
-            .oauth2Login(oauth2Login -> oauth2Login
-                .successHandler(customOAuth2LoginSuccessHandler)
-                .tokenEndpoint(tokenEndpoint -> tokenEndpoint
-                    .accessTokenResponseClient(tokenResponseClient))
-            )
-            .logout(logout -> logout
-                .logoutUrl("/logout")
-                .logoutSuccessHandler(cognitoOidcLogoutSuccessHandler)
-                .invalidateHttpSession(true)
-                .clearAuthentication(true)
-                .deleteCookies("JSESSIONID", "remember-me")
-            );
-        return http.build();
+    public JwtDecoder jwtDecoder() {
+        return NimbusJwtDecoder.withJwkSetUri("https://cognito-idp.us-east-1.amazonaws.com/us-east-1_kPfzTh4dA/.well-known/jwks.json").build();
     }
 }
