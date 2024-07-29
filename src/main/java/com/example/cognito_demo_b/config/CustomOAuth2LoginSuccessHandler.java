@@ -14,6 +14,7 @@ import java.io.IOException;
 @Component
 public class CustomOAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
+    // トークンレスポンスクライアント
     private final DefaultAuthorizationCodeTokenResponseClient tokenResponseClient;
 
     public CustomOAuth2LoginSuccessHandler() {
@@ -24,6 +25,7 @@ public class CustomOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
+        // 認証成功後に /siteB にリダイレクト
         response.sendRedirect("/siteB");
     }
 }
